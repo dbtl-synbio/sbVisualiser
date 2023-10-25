@@ -62,9 +62,15 @@ if __name__ == '__main__':
             network, pathways_info = sbml_to_json(input_folder=tmp_folder)
     elif os.path.isdir(args.input_rpSBMLs):
         network, pathways_info = sbml_to_json(input_folder=args.input_rpSBMLs)
+     elif '.json' in args.input_rpSBMLs:
+        with open(args.input_rpSBMLs,'rb') as d:
+            jsonnet = d.read().decode('utf-8', 'ignore')
+            
+            network = json.loads(jsonnet)
+            pathways_info = json.loads('')
     else:
         raise NotImplementedError()
-
+    
     # Add annotations
     network = annotate_cofactors(network, args.cofactor)  # Typical cofactors
     network = annotate_chemical_svg(network)  # SVGs depiction for chemical
@@ -81,6 +87,7 @@ if __name__ == '__main__':
         ofh.write('pathways_info = ' + json.dumps(pathways_info, indent=4))
     
     # Write single HTML if requested
+    args.autonomous_html='../data/outfolder_test_42/autonomous.html'
     if args.autonomous_html is not None:
         str_html = get_autonomous_html(args.output_folder)
         with open(args.autonomous_html, 'wb') as ofh:
