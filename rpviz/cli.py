@@ -14,12 +14,15 @@ import logging
 import tarfile
 import argparse
 import tempfile
+import pdb
 
-from rpviz.utils import sbml_to_json, annotate_cofactors, annotate_chemical_svg, get_autonomous_html
-from rpviz.Viewer import Viewer
+from utils import sbml_to_json, annotate_cofactors, annotate_chemical_svg, get_autonomous_html
+from Viewer import Viewer 
+
+    # input_rpSBMLs = /home/ricardo/Downloads/rpVisualiser-standalone/rpVisualiser-standalone/rpviz/network.json
+    # output_folder= /home/ricardo/Downloads/rpVisualiser-standalone/rpVisualiser-standalone/rpviz/data
 
 if __name__ == '__main__':
-
     # Arguments
     parser = argparse.ArgumentParser(description='Converting SBML RP file.')
     parser.add_argument('input_rpSBMLs',
@@ -50,9 +53,11 @@ if __name__ == '__main__':
     if not os.path.isfile(args.output_folder):
         try:
             os.makedirs(args.output_folder, exist_ok=True)
-        except IOError as e:
-            raise e
+        except:
+            os.makedirs('../data/outfolder_folder_test_42', exist_ok=True)
 
+    print('Hola1')
+   # args.input_rpSBMLs = '../data/Galaxy1015-[rpGlobalScore].tar'
     # Extract input if it is a tar archive
     if os.path.isfile(args.input_rpSBMLs) and tarfile.is_tarfile(args.input_rpSBMLs):
         with tempfile.TemporaryDirectory() as tmp_folder:
@@ -62,9 +67,14 @@ if __name__ == '__main__':
             network, pathways_info = sbml_to_json(input_folder=tmp_folder)
     elif os.path.isdir(args.input_rpSBMLs):
         network, pathways_info = sbml_to_json(input_folder=args.input_rpSBMLs)
+    elif '.json' in args.input_rpSBMLs:
+        with open(args.input_rpSBMLs,'rb') as d:
+            jsonnet = d.read().decode('utf-8', 'ignore')
+            network = json.loads(jsonnet)
+            pathways_info = json.loads('')
     else:
         raise NotImplementedError()
-
+    print('Hola2')
     # Add annotations
     network = annotate_cofactors(network, args.cofactor)  # Typical cofactors
     network = annotate_chemical_svg(network)  # SVGs depiction for chemical
@@ -81,6 +91,7 @@ if __name__ == '__main__':
         ofh.write('pathways_info = ' + json.dumps(pathways_info, indent=4))
     
     # Write single HTML if requested
+    args.autonomous_html='../data/outfolder_test_42/autonomous.html'
     if args.autonomous_html is not None:
         str_html = get_autonomous_html(args.output_folder)
         with open(args.autonomous_html, 'wb') as ofh:
