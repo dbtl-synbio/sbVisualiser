@@ -500,16 +500,16 @@ def annotate_chemical_svg(network):
     :param network: dict, network of elements as outputted by the sbml_to_json method
     :return: dict, network annotated
     """
-    from rdkit.Chem import MolFromInchi
+    from rdkit.Chem import MolFromSmiles
     from rdkit.Chem.Draw import rdMolDraw2D
     from rdkit.Chem.AllChem import Compute2DCoords
     from urllib import parse
-
+    
     for node in network['elements']['nodes']:
-        if node['data']['type'] == 'chemical' and node['data']['inchi'] is not None:
-            inchi = node['data']['inchi']
+        if node['data']['type'] == 'chemical' and node['data']['smiles'] is not None:
+            smiles = node['data']['smiles']
             try:
-                mol = MolFromInchi(inchi)
+                mol = MolFromSmiles(smiles)
                 # if mol is None:
                 #     raise BaseException('Mol is None')
                 Compute2DCoords(mol)
@@ -520,7 +520,7 @@ def annotate_chemical_svg(network):
                 svg = 'data:image/svg+xml;charset=utf-8,' + parse.quote(svg_draft)
                 node['data']['svg'] = svg
             except BaseException as e:
-                msg = 'SVG depiction failed from inchi: "{}"'.format(inchi)
+                msg = 'SVG depiction failed from SMILES: "{}"'.format(smiles)
                 logging.warning(msg)
                 logging.warning("Below the RDKit backtrace...")
                 logging.warning(e)
