@@ -62,12 +62,32 @@ if __name__ == '__main__':
             network, pathways_info = sbml_to_json(input_folder=tmp_folder)
     elif os.path.isdir(args.input_rpSBMLs):
         network, pathways_info = sbml_to_json(input_folder=args.input_rpSBMLs)
+    elif '.json' in args.input_rpSBMLs:
+        data = json.load(open(args.input_rpSBMLs))
+        network = {'elements':{'nodes':[],'edges':[]}}
+        for i in range(len(data['nodes'])):
+            network['elements']['nodes'].append({'data':data['nodes'][i]})
+            network['elements']['nodes'][i]['data']['paths_ids'] = []
+            network['elements']['nodes'][i]['data']['type'] = 'chemical'
+            network['elements']['nodes'][i]['data']['label'] = 'MNXM'
+            network['elements']['nodes'][i]['data']['type'] = 'chemical'
+            network['elements']['nodes'][i]['data']['smiles'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['inchi'] = ''
+            network['elements']['nodes'][i]['data']['inchikey'] = ''
+            network['elements']['nodes'][i]['data']['target_chemical'] = 0
+            network['elements']['nodes'][i]['data']['cofactor'] = 0
+            network['elements']['nodes'][i]['data']['svg'] = ''
+        for i in range(len(data['links'])):
+            network['elements']['edges'].append({'data':data['links'][i]})
+            network['elements']['edges'][i]['data']['id'] = network['elements']['edges'][i]['data']['source'] + '_' + network['elements']['edges'][i]['data']['target']
+            network['elements']['edges'][i]['data']['paths_ids'] = []
     else:
         raise NotImplementedError()
 
+    pathways_info = ''
     # Add annotations
-    network = annotate_cofactors(network, args.cofactor)  # Typical cofactors
-    network = annotate_chemical_svg(network)  # SVGs depiction for chemical
+    # network = annotate_cofactors(network, args.cofactor)  # Typical cofactors
+    # network = annotate_chemical_svg(network)  # SVGs depiction for chemical
 
     # Build the Viewer
     viewer = Viewer(out_folder=args.output_folder, template_folder=args.template_folder)
