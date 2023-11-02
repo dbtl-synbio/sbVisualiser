@@ -568,6 +568,58 @@ def get_autonomous_html(ifolder):
     htmlString = htmlString.replace(ori, rep)
     return htmlString
 
+def json_format(data):
+    network = {'elements':{'nodes':[],'edges':[]}}
+    for i in range(len(data['nodes'])):
+        if data['nodes'][i]['type'] == 'chemical':
+            network['elements']['nodes'].append({'data':data['nodes'][i]})
+            network['elements']['nodes'][i]['data']['paths_ids'] = []
+            network['elements']['nodes'][i]['data']['label'] = 'MNXM'
+            network['elements']['nodes'][i]['data']['type'] = 'chemical'
+            network['elements']['nodes'][i]['data']['smiles'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['inchi'] = ''
+            network['elements']['nodes'][i]['data']['inchikey'] = ''
+            network['elements']['nodes'][i]['data']['target_chemical'] = 0
+            network['elements']['nodes'][i]['data']['sink_chemical'] = 0
+            network['elements']['nodes'][i]['data']['cofactor'] = 0
+            network['elements']['nodes'][i]['data']['svg'] = ''
+        else:
+            network['elements']['nodes'].append({'data':data['nodes'][i]})
+            network['elements']['nodes'][i]['data']['paths_ids'] = []
+            network['elements']['nodes'][i]['data']['label'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['type'] = 'reaction'
+            network['elements']['nodes'][i]['data']['inchi'] = ''
+            network['elements']['nodes'][i]['data']['inchikey'] = ''
+        for i in range(len(data['links'])):
+            network['elements']['edges'].append({'data':data['links'][i]})
+            network['elements']['edges'][i]['data']['id'] = network['elements']['edges'][i]['data']['source'] + '_' + network['elements']['edges'][i]['data']['target']
+            network['elements']['edges'][i]['data']['paths_ids'] = []    
+    return network
+
+
+def pathways_info_maker(all_paths):
+    pathways_info = {}
+    for i in range(len(all_paths)):
+        pathways_info['P0D0_'+str(i+1)]={'Path_id':'P0D0_'+str(i+1),'node_ids':all_paths[i],'edge_ids':[],'nb_steps':0, 'scores':0, 'thermo_dg_m_gibbs':1.5,'fba_target_flux':2.6}
+        for j in range(len(all_paths[i])-1):
+            pathways_info['P0D0_'+str(i+1)]['edge_ids'].append(all_paths[i][j]+'_'+all_paths[i][j+1])
+        for j in all_paths[i]:
+            if '_' in j:
+                pathways_info['P0D0_'+str(i+1)]['nb_steps'] += 1
+    return pathways_info
+
+
+def inset_paths_ids(network, pathways_info):
+    for p in pathways_info:
+        for i in network['elements']['nodes']:
+            if i['data']['id'] in pathways_info[p]['node_ids']:
+                i['data']['paths_ids'].append(p)
+        for i in network['elements']['edges']:
+            if i['data']['id'] in pathways_info[p]['edge_ids']:
+                i['data']['paths_ids'].append(p)
+                i['data']['paths_ids'] = list(dict.fromkeys(i['data']['paths_ids']))
+    return network
+
 
 if __name__ == '__main__':
 
