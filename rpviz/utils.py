@@ -15,6 +15,8 @@ import logging
 from statistics import mean
 from collections import OrderedDict
 
+from rdkit import Chem
+
 import rpSBML
 
 miriam_header = {'compartment': {'go': 'go/GO:', 'mnx': 'metanetx.compartment/', 'bigg': 'bigg.compartment/', 'seed': 'seed/', 'name': 'name/'}, 'reaction': {'metanetx': 'metanetx.reaction/', 'rhea': 'rhea/', 'reactome': 'reactome/', 'bigg': 'bigg.reaction/', 'sabiork': 'sabiork.reaction/', 'ec-code': 'ec-code/', 'biocyc': 'biocyc/', 'lipidmaps': 'lipidmaps/'}, 'species': {'metanetx': 'metanetx.chemical/', 'chebi': 'chebi/CHEBI:', 'bigg': 'bigg.metabolite/', 'hmdb': 'hmdb/', 'kegg_c': 'kegg.compound/', 'kegg_d': 'kegg.drug/', 'biocyc': 'biocyc/META:', 'seed': 'seed.compound/', 'metacyc': 'metacyc.compound/', 'sabiork': 'sabiork.compound/', 'reactome': 'reactome/R-ALL-'}}
@@ -500,16 +502,16 @@ def annotate_chemical_svg(network):
     :param network: dict, network of elements as outputted by the sbml_to_json method
     :return: dict, network annotated
     """
-    from rdkit.Chem import MolFromInchi
+    from rdkit.Chem import MolFromSmiles
     from rdkit.Chem.Draw import rdMolDraw2D
     from rdkit.Chem.AllChem import Compute2DCoords
     from urllib import parse
-
+    
     for node in network['elements']['nodes']:
-        if node['data']['type'] == 'chemical' and node['data']['inchi'] is not None:
-            inchi = node['data']['inchi']
+        if node['data']['type'] == 'chemical' and node['data']['smiles'] is not None:
+            smiles = node['data']['smiles']
             try:
-                mol = MolFromInchi(inchi)
+                mol = MolFromSmiles(smiles)
                 # if mol is None:
                 #     raise BaseException('Mol is None')
                 Compute2DCoords(mol)
@@ -520,7 +522,7 @@ def annotate_chemical_svg(network):
                 svg = 'data:image/svg+xml;charset=utf-8,' + parse.quote(svg_draft)
                 node['data']['svg'] = svg
             except BaseException as e:
-                msg = 'SVG depiction failed from inchi: "{}"'.format(inchi)
+                msg = 'SVG depiction failed from SMILES: "{}"'.format(smiles)
                 logging.warning(msg)
                 logging.warning("Below the RDKit backtrace...")
                 logging.warning(e)
@@ -568,6 +570,105 @@ def get_autonomous_html(ifolder):
     htmlString = htmlString.replace(ori, rep)
     return htmlString
 
+
+def json_format(data):
+    network = {'elements':{'nodes':[],'edges':[]}}
+    for i in range(len(data['nodes'])):
+        if data['nodes'][i]['type'] == 'chemical':
+            network['elements']['nodes'].append({'data':data['nodes'][i]})
+            network['elements']['nodes'][i]['data']['path_ids'] = []
+            network['elements']['nodes'][i]['data']['label'] = 'CMPD_'+str(i)
+            network['elements']['nodes'][i]['data']['short_label'] = 'CMPD_'+str(i)
+            network['elements']['nodes'][i]['data']['all_labels'] = ['CMPD_'+str(i)]
+            network['elements']['nodes'][i]['data']['type'] = 'chemical'
+            network['elements']['nodes'][i]['data']['smiles'] = data['nodes'][i]['id']
+            m = Chem.MolFromSmiles(data['nodes'][i]['id'])
+            network['elements']['nodes'][i]['data']['inchi'] = Chem.MolToInchi(m)
+            network['elements']['nodes'][i]['data']['inchikey'] = Chem.MolToInchiKey(m)
+            network['elements']['nodes'][i]['data']['target_chemical'] = False
+            network['elements']['nodes'][i]['data']['sink_chemical'] = False
+            network['elements']['nodes'][i]['data']['cofactor'] = False
+            network['elements']['nodes'][i]['data']['svg'] = ''
+            network['elements']['nodes'][i]['data']['rsmiles'] = None
+            network['elements']['nodes'][i]['data']['rule_ids'] = None
+            network['elements']['nodes'][i]['data']['rule_score'] = None
+            network['elements']['nodes'][i]['data']['rxn_template_ids'] = None
+            network['elements']['nodes'][i]['data']['ec_numbers'] = None
+            # network['elements']['nodes'][i]['data']['thermo_dg_m_gibbs'] = None
+            # network['elements']['nodes'][i]['data']['thermo_dg_m_formation'] = None
+            network['elements']['nodes'][i]['data']['xlinks'] = [{'db_name':'','entity_id':'CMPD_'+str(i),'url':''}]
+        else:
+            network['elements']['nodes'].append({'data':data['nodes'][i]})
+            network['elements']['nodes'][i]['data']['path_ids'] = []
+            network['elements']['nodes'][i]['data']['label'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['all_labels'] = [data['nodes'][i]['id']]
+            network['elements']['nodes'][i]['data']['type'] = 'reaction'
+            network['elements']['nodes'][i]['data']['inchi'] = None
+            network['elements']['nodes'][i]['data']['inchikey'] = None
+            network['elements']['nodes'][i]['data']['cofactor'] = None
+            network['elements']['nodes'][i]['data']['ec_numbers'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['rsmiles'] = None
+            network['elements']['nodes'][i]['data']['rule_ids'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['rule_score'] = None
+            network['elements']['nodes'][i]['data']['rxn_template_ids'] = data['nodes'][i]['id']
+            network['elements']['nodes'][i]['data']['short_label'] = data['nodes'][i]['id'][0:6] +'..'
+            network['elements']['nodes'][i]['data']['sink_chemical'] = None
+            network['elements']['nodes'][i]['data']['smiles'] = None
+            network['elements']['nodes'][i]['data']['svg'] = None
+            network['elements']['nodes'][i]['data']['target_chemical'] = None
+            # network['elements']['nodes'][i]['data']['thermo_dg_m_gibbs'] = None
+            # network['elements']['nodes'][i]['data']['thermo_dg_m_formation'] = None
+            network['elements']['nodes'][i]['data']['uniprot_ids'] = {}
+            network['elements']['nodes'][i]['data']['xlinks'] = [{'db_name':'','entity_id':data['nodes'][i]['id'],'url':''}]
+        for i in range(len(data['links'])):
+            network['elements']['edges'].append({'data':data['links'][i]})
+            network['elements']['edges'][i]['data']['id'] = network['elements']['edges'][i]['data']['source'] + '_' + network['elements']['edges'][i]['data']['target']
+            network['elements']['edges'][i]['data']['path_ids'] = []    
+    return network
+
+
+def source_target(network, source, target):
+    for i in network['elements']['nodes']:
+        if i['data']['id'] == source:
+            i['data']['sink_chemical'] = True
+        if i['data']['id'] == target:
+            i['data']['target_chemical'] = True
+    return network
+
+
+def pathways_info_maker(all_paths):
+    pathways_info = {}
+    for i in range(len(all_paths)):
+        node_ids = []
+        for j in all_paths[i]:
+            node_ids += j
+        pathways_info['P0D0_'+str(i+1)]={'Path_id':'P0D0_'+str(i+1),'node_ids':node_ids,'edge_ids':[],'nb_steps':0, 'scores':0, 'thermo_dg_m_gibbs':1.5,'fba_target_flux':2.6}
+        edge_ids = []
+        for k in range(len(node_ids)):
+            if '_' not in node_ids[k]:
+                for j in range(k, len(node_ids)):
+                    if '_' in node_ids[j]:
+                        edge_ids.append(node_ids[k]+'_'+node_ids[j])
+                        break
+            else:
+                edge_ids.append(node_ids[k]+'_'+node_ids[k+1])
+        pathways_info['P0D0_'+str(i+1)]['edge_ids']=edge_ids
+        for j in all_paths[i]:
+            if '_' in j:
+                pathways_info['P0D0_'+str(i+1)]['nb_steps'] += 1
+    return pathways_info
+
+
+def insert_paths_ids(network, pathways_info):
+    for p in pathways_info:
+        for i in network['elements']['nodes']:
+            if i['data']['id'] in pathways_info[p]['node_ids']:
+                i['data']['path_ids'].append(p)
+        for i in network['elements']['edges']:
+            if i['data']['id'] in pathways_info[p]['edge_ids']:
+                i['data']['path_ids'].append(p)
+                i['data']['path_ids'] = list(dict.fromkeys(i['data']['path_ids']))
+    return network
 
 if __name__ == '__main__':
 
