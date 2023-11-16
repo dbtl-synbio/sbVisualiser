@@ -36,7 +36,10 @@ if __name__ == '__main__':
         all_paths.append(i)
     for i in range(len(all_paths)):
         for j in range(1,len(all_paths[i])):
-            all_paths[i][j-1] = list(G.predecessors(all_paths[i][j]))
+            if '_' not in all_paths[i][j-1]:
+                all_paths[i][j-1] = list(G.predecessors(all_paths[i][j]))
+            else:
+                all_paths[i][j-1] = [all_paths[i][j-1]]
         all_paths[i][-1] = [all_paths[i][-1]]
         
     network = json_format(data)
